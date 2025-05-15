@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "main": "dist/app.js",
   "scripts": {
-    "start": "ts-node src/app.ts",
+    "start": "node dist/app.js",
     "dev": "nodemon --watch src --exec ts-node src/app.ts",
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "migrate": "ts-node src/config/migrate.ts",

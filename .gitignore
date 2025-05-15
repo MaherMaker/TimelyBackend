@@ -72,3 +72,6 @@ typings/
 
 # SQLite database file
 data/database.sqlite
+
+# Build output
+dist/
