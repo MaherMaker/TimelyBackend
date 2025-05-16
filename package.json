@@ -6,6 +6,7 @@
     "start": "node dist/app.js",
     "dev": "nodemon --watch src --exec ts-node src/app.ts",
     "build": "rm -rf dist && tsc",
+    "clean": "rm -rf dist",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "migrate": "ts-node src/config/migrate.ts",
