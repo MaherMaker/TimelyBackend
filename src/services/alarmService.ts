@@ -18,8 +18,9 @@ class AlarmService {
     try {
       const devices = await DeviceModel.findAllByUserId(userId); // Use DeviceModel instance method
       for (const device of devices) {
+        // Ensure we don't send a notification to the device that initiated the change
         if (device.fcm_token && device.device_id !== excludeDeviceId) {
-          logger.info(`Notifying device ${device.device_id} for user ${userId} about ${operation} on entity ${entityId}`);
+          logger.info(`Notifying device ${device.device_id} (FCM: ${device.fcm_token ? device.fcm_token.substring(0,10) + '...' : 'N/A'}) for user ${userId} about ${operation} on entity ${entityId}. Excluded device: ${excludeDeviceId}`);
           // Changed from sendDataNotification to sendPushNotification
           await sendPushNotification({
             token: device.fcm_token,
@@ -50,8 +51,9 @@ class AlarmService {
       if (alarmId) {
         const newAlarm = await AlarmModel.findById(alarmId, alarm.userId);
         if (newAlarm && typeof newAlarm.id === 'number') { // Check newAlarm and its id
-          logger.info(`Alarm created: ${newAlarm.id} by user ${alarm.userId}. Emitting to user, excluding socket: ${senderSocketId}`);
+          logger.info(`Alarm created: ${newAlarm.id} by user ${alarm.userId} on device ${senderDeviceId}. Emitting to user, excluding socket: ${senderSocketId}`);
           emitToUser(alarm.userId, 'alarm_created', newAlarm, senderSocketId);
+          // Pass senderDeviceId to exclude it from push notifications
           this.notifyOtherDevices(alarm.userId, 'create', newAlarm.id, senderDeviceId);
         }
         return {
@@ -95,8 +97,9 @@ class AlarmService {
 
       const updatedAlarm = await AlarmModel.findById(id, userId);
       if (updatedAlarm && typeof updatedAlarm.id === 'number') { // Check updatedAlarm and its id
-        logger.info(`Alarm updated: ${updatedAlarm.id} by user ${userId}. Emitting to user, excluding socket: ${senderSocketId}`);
+        logger.info(`Alarm updated: ${updatedAlarm.id} by user ${userId} on device ${senderDeviceId}. Emitting to user, excluding socket: ${senderSocketId}`);
         emitToUser(userId, 'alarm_updated', updatedAlarm, senderSocketId);
+        // Pass senderDeviceId to exclude it from push notifications
         this.notifyOtherDevices(userId, 'update', updatedAlarm.id, senderDeviceId);
       }
 
@@ -127,8 +130,9 @@ class AlarmService {
 
       await AlarmModel.delete(id, userId);
 
-      logger.info(`Alarm deleted: ${id} by user ${userId}. Emitting to user, excluding socket: ${senderSocketId}`);
+      logger.info(`Alarm deleted: ${id} by user ${userId} on device ${senderDeviceId}. Emitting to user, excluding socket: ${senderSocketId}`);
       emitToUser(userId, 'alarm_deleted', { id }, senderSocketId);
+      // Pass senderDeviceId to exclude it from push notifications
       this.notifyOtherDevices(userId, 'delete', id, senderDeviceId); // id is already a number here
 
       return {
@@ -140,49 +144,6 @@ class AlarmService {
       return {
         success: false,
         message: 'Error deleting alarm'
-      };
-    }
-  }
-
-  async getAlarm(id: number, userId: number): Promise<AlarmOperationResult> {
-    try {
-      const alarm = await AlarmModel.findById(id, userId);
-
-      if (!alarm) {
-        return {
-          success: false,
-          message: 'Alarm not found'
-        };
-      }
-
-      return {
-        success: true,
-        message: 'Alarm retrieved successfully',
-        alarm
-      };
-    } catch (error) {
-      logger.error('Error retrieving alarm', { error: (error as Error).message });
-      return {
-        success: false,
-        message: 'Error retrieving alarm'
-      };
-    }
-  }
-
-  async getAllAlarms(userId: number): Promise<AlarmOperationResult> {
-    try {
-      const alarms = await AlarmModel.findAllByUserId(userId);
-
-      return {
-        success: true,
-        message: 'Alarms retrieved successfully',
-        alarms
-      };
-    } catch (error) {
-      logger.error('Error retrieving alarms', { error: (error as Error).message });
-      return {
-        success: false,
-        message: 'Error retrieving alarms'
       };
     }
   }
@@ -202,9 +163,10 @@ class AlarmService {
 
       const updatedAlarm = await AlarmModel.findById(id, userId);
       if (updatedAlarm && typeof updatedAlarm.id === 'number') { // Check updatedAlarm and its id
-        logger.info(`Alarm toggled: ${updatedAlarm.id} to ${isActive} by user ${userId}. Emitting to user, excluding socket: ${senderSocketId}`);
-        emitToUser(userId, 'alarm_updated', updatedAlarm, senderSocketId);
-        this.notifyOtherDevices(userId, 'toggle', updatedAlarm.id, senderDeviceId);
+        logger.info(`Alarm ${updatedAlarm.id} isActive toggled to ${isActive} by user ${userId} on device ${senderDeviceId}. Emitting to user, excluding socket: ${senderSocketId}`);
+        emitToUser(userId, 'alarm_updated', updatedAlarm, senderSocketId); // Use 'alarm_updated' for consistency
+        // Pass senderDeviceId to exclude it from push notifications
+        this.notifyOtherDevices(userId, 'update', updatedAlarm.id, senderDeviceId);
       }
 
       return {
