@@ -183,6 +183,48 @@ class AlarmService {
     }
   }
 
+  async getAlarm(id: number, userId: number): Promise<AlarmOperationResult> {
+    try {
+      const alarm = await AlarmModel.findById(id, userId);
+      if (alarm) {
+        return {
+          success: true,
+          message: 'Alarm retrieved successfully',
+          alarm: alarm
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Alarm not found'
+        };
+      }
+    } catch (error) {
+      logger.error('Error retrieving alarm in service', { error: (error as Error).message, alarmId: id, userId });
+      return {
+        success: false,
+        message: 'Error retrieving alarm'
+      };
+    }
+  }
+
+  async getAllAlarms(userId: number): Promise<AlarmOperationResult> {
+    try {
+      const alarms = await AlarmModel.findAllByUserId(userId);
+      // No need to check if alarms array is empty, an empty array is a valid result.
+      return {
+        success: true,
+        message: 'Alarms retrieved successfully',
+        alarms: alarms
+      };
+    } catch (error) {
+      logger.error('Error retrieving all alarms in service', { error: (error as Error).message, userId });
+      return {
+        success: false,
+        message: 'Error retrieving all alarms'
+      };
+    }
+  }
+
   async syncAlarms(
     userId: number,
     deviceId: string,
